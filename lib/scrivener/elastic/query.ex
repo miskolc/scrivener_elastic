@@ -4,7 +4,7 @@ defimpl Scrivener.Paginater, for: Elastic.Query do
   @moduledoc false
 
   @spec paginate(Elastic.Query.t, Scrivener.Config.t) :: Scrivener.Page.t
-  def paginate(query, %Config{page_size: page_size, page_number: page_number, module: mod}) do
+  def paginate(query, %Config{page_size: page_size, page_number: page_number, module: mod, max_total_pages: max_total_pages}) do
     total_entries = total_entries(query, mod)
 
     %Page{
@@ -12,7 +12,7 @@ defimpl Scrivener.Paginater, for: Elastic.Query do
       page_number: page_number,
       entries: entries(query, mod, page_number, page_size),
       total_entries: total_entries,
-      total_pages: total_pages(total_entries, page_size)
+      total_pages: total_pages(total_entries, page_size, max_total_pages)
     }
   end
 
@@ -41,7 +41,11 @@ defimpl Scrivener.Paginater, for: Elastic.Query do
     mod.count(body)
   end
 
-  defp total_pages(total_entries, page_size) do
-    ceiling(total_entries / page_size)
+  defp total_pages(total_entries, page_size, max_total_pages) do
+    total_pages = ceiling(total_entries / page_size)
+    case total_pages > @scrivener_elastic_total_pages do
+      true  -> max_total_pages
+      false -> total_pages
+    end
   end
 end
